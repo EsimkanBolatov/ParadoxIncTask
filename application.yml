@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/taskapi
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+jwt:
+  secret: C233964F07634C8C38F608C60BD899D20AFD3A0C37213F5D
+  accessTokenExpirationMs: 900000     # 15 мин
+  refreshTokenExpirationMs: 604800000 # 7 дэй
