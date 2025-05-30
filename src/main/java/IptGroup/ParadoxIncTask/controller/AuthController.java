@@ -5,6 +5,7 @@ import IptGroup.ParadoxIncTask.dto.AuthResponse;
 import IptGroup.ParadoxIncTask.entity.User;
 import IptGroup.ParadoxIncTask.provider.JwtTokenProvider;
 import IptGroup.ParadoxIncTask.repository.UserRepository;
+import IptGroup.ParadoxIncTask.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -23,6 +26,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody AuthRequest request) {
@@ -57,6 +61,27 @@ public class AuthController {
         String refreshToken = jwtTokenProvider.generateToken(user.getUsername(), refreshTokenExpirationMs);
 
         return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@RequestBody Map<String, String> request) {
+        String refreshToken = request.get("refreshToken");
+
+        return refreshTokenService.findByToken(refreshToken)
+                .map(token -> {
+                    if (refreshTokenService.isExpired(token)) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token expired");
+                    }
+                    String newAccessToken = jwtTokenProvider.generateToken(
+                            token.getUser().getUsername(),
+                            accessTokenExpirationMs
+                    );
+                    return ResponseEntity.ok(Map.of(
+                            "accessToken",  newAccessToken,
+                            "refreshToken", refreshToken
+                    ));
+                })
+                .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token"));
     }
 }
 
